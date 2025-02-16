@@ -399,6 +399,10 @@ class TradeOptions:
         if not positions:
             return None, None
         for position in positions:
+            # Skip long calls and puts as we only focus on selling theta
+            short_quantity = position.get('instrument', {}).get('shortQuantity')
+            if short_quantity is None or short_quantity == 0:
+                continue  
             if position.get('instrument').get('assetType') == 'OPTION':
                 option = Options(position)
                 option_positions.append(option)

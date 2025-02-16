@@ -20,6 +20,7 @@ ACCOUNT_TRADING_STRATEGY_MAP = {
     IRA_ACCOUNT_NUMBER: "THE_WHEEL",
 }
 
+EXCLUSION_LIST = ['EXAMPLETICKER']
 TICKERS_OF_IV_50_70 = ["AFRM", "AI", "BHC", "BITO", "CAR", "CELH", "CHWY", "DELL", "FSLR",
                        "HOOD", "JBLU", "LYFT", "MDB", "MRNA", "ONON", "ROKU", "SLB", "SNAP", "SOFI",
                        "SPOT", "TSLA", "U", "W", "Z"]

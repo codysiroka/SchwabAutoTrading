@@ -4,7 +4,7 @@ import schwabdev
 from time import sleep
 import pandas as pd
 
-from configs.config import Config, TRUST_ACCOUNT_NUMBER, ACCOUNT_TRADING_STRATEGY_MAP, TICKERS_FOR_THE_WHEEL, STO_TRADE_SETTINGS, STO_PUT_COUNT_MAX, ROLLOUT_WINNING_TRADE_PREMIUM_INCREASE
+from configs.config import Config, TRUST_ACCOUNT_NUMBER, ACCOUNT_TRADING_STRATEGY_MAP, TICKERS_FOR_THE_WHEEL, STO_TRADE_SETTINGS, STO_PUT_COUNT_MAX, ROLLOUT_WINNING_TRADE_PREMIUM_INCREASE, EXCLUSION_LIST
 from configs.utils import OptionType, TradeReason, sum_of_option_strike_prices
 from options.options import Options
 from options.stocks import Stocks
@@ -97,20 +97,23 @@ class TradeOptions:
 
     def trade_all_accounts(self) -> None:
         for account_number in self.account_number_to_hash.keys():
+            ticker_to_stock_map = self.ticker_to_stock_map_by_account[account_number]
+            filtered_ticker_to_stock_map = {ticker: stock for ticker, stock in ticker_to_stock_map.items()
+            if ticker not in EXCLUSION_LIST}
             # For the trust account, we close the winning options,
             # and roll out the losing options because we have no scash in the account;
             print(f"\n\n\nProcessing account {account_number}")
             if ACCOUNT_TRADING_STRATEGY_MAP.get(account_number) == "THE_WHEEL":
-                self.process_winning_trades(
-                    account_number, self.options_by_account[account_number], self.ticker_to_stock_map_by_account[account_number])
-                # Now we sell cash-secured puts and covered calls;
+                 self.process_winning_trades(
+                    account_number, self.options_by_account[account_number], filtered_ticker_to_stock_map)
+            # Now we sell cash-secured puts and covered calls;
                 self.selL_cc_and_csp(
-                    account_number, self.ticker_to_stock_map_by_account[account_number])
+                    account_number, filtered_ticker_to_stock_map)
             else:
                 self.process_winning_trades(
-                    account_number, self.options_by_account[account_number], self.ticker_to_stock_map_by_account[account_number])
+                    account_number, self.options_by_account[account_number], filtered_ticker_to_stock_map)
                 self.process_losing_trades(
-                    account_number, self.options_by_account[account_number], self.ticker_to_stock_map_by_account[account_number])
+                    account_number, self.options_by_account[account_number], filtered_ticker_to_stock_map)
         return
 
     def constrain_to_current_positions(self, account_number, ticker_list) -> list[str]:
@@ -295,7 +298,8 @@ class TradeOptions:
     def selL_cc_and_csp(self, account_number, ticker_to_stock_map, trade_reason=TradeReason.STO_FROM_THE_WHEEL) -> None:
         sto_trade_setting = STO_TRADE_SETTINGS.get(account_number)
         # first sell covered calls; the covered call price should be larger than the cost basis;
-        for ticker in self.position_tracker[account_number].keys():
+        acct_tickers = self.position_tracker[account_number].keys()
+        for ticker in [t for t in acct_tickers if t not in EXCLUSION_LIST]:
             ticker_info = self.position_tracker[account_number].get(ticker)
             num_stocks = ticker_info.get("stock", 0)
             call_options = ticker_info.get(str(OptionType.CALL), [])

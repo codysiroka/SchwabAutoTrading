@@ -46,10 +46,6 @@ class TradeOptions:
             self.available_funds_by_account[account_number] = positions.get(
                 'securitiesAccount').get('currentBalances').get('availableFunds', 0)
             positions = positions.get('securitiesAccount').get('positions')
-            # Remove long calls and puts from positions
-            positions = [pos for pos in positions 
-            if not ( pos.get('instrument', {}).get('putCall') in ['PUT', 'CALL'] and 
-                (pos.get('shortQuantity', 0) == 0 or pos.get('longQuantity', 0) > 0) ) ]
             options, ticker_to_stock_map = self.process_positions(
                 account_number, positions)
             self.options_by_account[account_number] = options

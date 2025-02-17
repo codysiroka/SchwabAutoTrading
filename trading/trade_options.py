@@ -46,6 +46,10 @@ class TradeOptions:
             self.available_funds_by_account[account_number] = positions.get(
                 'securitiesAccount').get('currentBalances').get('availableFunds', 0)
             positions = positions.get('securitiesAccount').get('positions')
+            # Remove long calls and puts from positions
+            positions = [pos for pos in positions 
+            if not ( pos.get('instrument', {}).get('putCall') in ['PUT', 'CALL'] and 
+                (pos.get('shortQuantity', 0) == 0 or pos.get('longQuantity', 0) > 0) ) ]
             options, ticker_to_stock_map = self.process_positions(
                 account_number, positions)
             self.options_by_account[account_number] = options
@@ -399,10 +403,6 @@ class TradeOptions:
         if not positions:
             return None, None
         for position in positions:
-            # Skip long calls and puts as we only focus on selling theta
-            short_quantity = position.get('instrument', {}).get('shortQuantity')
-            if short_quantity is None or short_quantity == 0:
-                continue  
             if position.get('instrument').get('assetType') == 'OPTION':
                 option = Options(position)
                 option_positions.append(option)

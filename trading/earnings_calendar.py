@@ -4,7 +4,7 @@ import json
 from os import path
 import yfinance as yf
 
-from configs.config import Config
+from configs.config import Config, EARNINGS_EXCLUSION_LIST
 from configs.utils import TOP_LEVEL_DIR
 
 
@@ -49,22 +49,29 @@ class EarningsCalendar:
     def generate_earnings_calendar_from_yahoo_finance(symbol_list):
         earnings_calendar_map = {}
         for symbol in symbol_list:
-            ticker = yf.Ticker(symbol)
-            earning_date = ticker.calendar.get('Earnings Date')
-            if earning_date:
-                earning_date = earning_date[0]
-                # only care about the future earnings
-                if earning_date < datetime.date(datetime.now()):
-                    continue
-                # convert it to string, in the format of "YYYY-MM-DD"
-                earning_date = earning_date.strftime("%Y-%m-%d")
-                if earning_date not in earnings_calendar_map:
-                    earnings_calendar_map[earning_date] = [symbol]
-                else:
-                    earnings_calendar_map[earning_date].append(symbol)
+            try:
+                if symbol in EARNINGS_EXCLUSION_LIST:
+                    break
+                ticker = yf.Ticker(symbol)
+                earning_date = ticker.calendar.get('Earnings Date')
+                if earning_date:
+                    earning_date = earning_date[0]
+                    # only care about the future earnings
+                    if earning_date < datetime.date(datetime.now()):
+                        continue
+                    # convert it to string, in the format of "YYYY-MM-DD"
+                    earning_date = earning_date.strftime("%Y-%m-%d")
+                    if earning_date not in earnings_calendar_map:
+                        earnings_calendar_map[earning_date] = [symbol]
+                    else:
+                        earnings_calendar_map[earning_date].append(symbol)
+            except Exception as e:
+                print(f"Error in getting earnings for {symbol}: {e}")
+                continue
         # write this map to a json file
         earnings_calendar_json_path = path.join(TOP_LEVEL_DIR, "data/earnings_calendar.json")
         with open(earnings_calendar_json_path, "w", encoding="utf-8") as f:
             json.dump(earnings_calendar_map, f, ensure_ascii=False, indent=4, sort_keys=True)
             f.close()
+
 
